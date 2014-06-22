@@ -23,29 +23,27 @@ testY<-read.table("./Data/UCI HAR Dataset/test/y_test.txt", sep="")
 trainSubject<-read.table("./Data/UCI HAR Dataset/train/subject_train.txt", sep="")
 trainX<-read.table("./Data/UCI HAR Dataset/train/X_train.txt", sep="")
 trainY<-read.table("./Data/UCI HAR Dataset/train/y_train.txt", sep="")
+featureNames<-read.table("./Data/UCI HAR Dataset/features.txt", sep="")
 
-##subset out some measures (6 means, 6 standard devs), and tag the datasets for when they are later combined
+myIDs<-c(1:6,41:46,81:86,121:126,161:166,201:202,214:215,227:228,240:241,253:254,
+		266:271,345:350,424:429,503:504,516:517,529:530,542:543)
+myNames<-as.character(featureNames[myIDs,2])
+
+
+##subset out mean and STD measures, and tag the datasets for when they are later combined
 master<-cbind(
-	testX[,c(1:6,41:46)],
-	datasource='test',
+	testX[,myIDs],
 	subjectID=testSubject[,1],
 	activityID=testY[,1])
-colnames(master)<-c('BodyAcc-mean-X','BodyAcc-mean-Y','BodyAcc-mean-Z',
-	'BodyAcc-std-X','BodyAcc-std-Y','BodyAcc-std-Z',
-	'GravityAcc-mean-X','GravityAcc-mean-Y','GravityAcc-mean-Z',
-	'GravityAcc-std-X','GravityAcc-std-Y','GravityAcc-std-Z',
-	colnames(master)[13:15])
+colnames(master)<-c(myNames,
+	colnames(master)[67:68])
 
 ###rename the training columns, before attaching them to the end of master
-colnames(trainX)[c(1:6,41:46)]<-c('BodyAcc-mean-X','BodyAcc-mean-Y','BodyAcc-mean-Z',
-	'BodyAcc-std-X','BodyAcc-std-Y','BodyAcc-std-Z',
-	'GravityAcc-mean-X','GravityAcc-mean-Y','GravityAcc-mean-Z',
-	'GravityAcc-std-X','GravityAcc-std-Y','GravityAcc-std-Z')
+colnames(trainX)[myIDs]<-myNames
 
 master<-rbind(master,
 	cbind(
-		trainX[,c(1:6,41:46)],
-		datasource='train',
+		trainX[,myIDs],
 		subjectID=trainSubject[,1],
 		activityID=trainY[,1])
 	)
@@ -53,5 +51,16 @@ master<-rbind(master,
 ##turn activities into factors
 master$activityID<-as.factor(master$activityID)
 
+##name the levels appropriately
+levels(master$activityID)[levels(master$activityID)=="1"]<-"WALKING"
+levels(master$activityID)[levels(master$activityID)=="2"]<-"WALKING UPSTAIRS"
+levels(master$activityID)[levels(master$activityID)=="3"]<-"WALKING DOWNSTAIRS"
+levels(master$activityID)[levels(master$activityID)=="4"]<-"SITTING"
+levels(master$activityID)[levels(master$activityID)=="5"]<-"STANDING"
+levels(master$activityID)[levels(master$activityID)=="6"]<-"LAYING"
 
-	
+tidy<-aggregate(master[,1:(ncol(master)-2)],
+	by=list(activityID=master$activityID,subjectID=master$subjectID),mean,simplify=TRUE,na.action=na.omit)
+
+write.csv(tidy,'./Data/CourseProject.txt',row.names=FALSE)
+
